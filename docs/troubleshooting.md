@@ -19,7 +19,7 @@ Ollama service isn't running. macOS: open the Ollama app. Linux: `ollama serve` 
 Install GitHub CLI: `brew install gh` (Mac), `sudo apt install gh` (Linux/WSL).
 
 **"release not found"**
-The pinned `CORPUS_VERSION` in `download-corpus.sh` doesn't match a published release. Pull the latest distribution-repo commits: `git pull`.
+`CORPUS_VERSION` (set in your environment to pin a release) doesn't match a published release. Unset it to take the latest, or pick a tag from the repository's Releases page.
 
 **SHA-256 mismatch**
 The downloaded tarball doesn't match the expected hash. Re-run `./download-corpus.sh` — likely a transient download corruption. If it persists, file an issue.

@@ -17,7 +17,7 @@ Recipients run everything locally. No data leaves your machine.
 
 ## Operator
 
-This repo is the cooked-product face of [RecapFlow-automation](https://github.com/hopchouinard/RecapFlow-automation). Source code, Python package, and release tooling live there.
+This repo is the cooked-product face of Community Brain (`Patchoulab/community-brain`, private). Source code, the Python package and the corpus build live there; corpus releases are published here.
 
 ## License
 
