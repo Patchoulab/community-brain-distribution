@@ -6,6 +6,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   fixture-smoke-install:
     runs-on: ubuntu-latest

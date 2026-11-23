@@ -1,19 +1,23 @@
 #!/usr/bin/env bash
 # download-corpus.sh — fetch + verify + extract the Tier B corpus.
 #
-# Idempotent: re-running with the same CORPUS_VERSION already-extracted
-# exits 0 without re-fetching. Rollback rotation: existing ./corpus/ is
-# moved to ./corpus.previous/ (one level kept).
+# By default it takes the latest published release; set CORPUS_VERSION to pin
+# one (and EXPECTED_SHA256 to pin its tarball's hash as well). Every download
+# is checked against the release's sha256sum.txt.
+#
+# Idempotent: re-running when the target version is already extracted exits 0
+# without re-fetching. Rollback rotation: existing ./corpus/ is moved to
+# ./corpus.previous/ (one level kept).
 #
 # Per spec §5.5.
 
 set -euo pipefail
 
-# === Pinned by operator on each corpus release ===
-CORPUS_VERSION="v1.2.0"
-EXPECTED_SHA256="783466593d3077b227d715c0efe8ac9266db7e28a745251d24c0dd2148d0b109"
-RELEASE_REPO="hopchouinard/community-brain-distribution"
-# =================================================
+# === Optional pins (environment) ===
+CORPUS_VERSION="${CORPUS_VERSION:-latest}"
+EXPECTED_SHA256="${EXPECTED_SHA256:-}"
+RELEASE_REPO="${RELEASE_REPO:-Patchoulab/community-brain-distribution}"
+# ===================================
 
 CORPUS_DIR="./corpus"
 PREVIOUS_DIR="./corpus.previous"
@@ -33,6 +37,23 @@ sha256_of() {
     fi
 }
 
+# Need gh CLI for release lookups and asset downloads.
+if ! command -v gh >/dev/null 2>&1; then
+    log "ERROR: gh CLI is required to download release assets"
+    log "  install: https://cli.github.com/"
+    exit 2
+fi
+
+# Resolve "latest" to the newest published (non-draft, non-prerelease) release.
+if [[ "$CORPUS_VERSION" == "latest" ]]; then
+    CORPUS_VERSION=$(gh release view --repo "${RELEASE_REPO}" --json tagName --jq .tagName)
+    if [[ -z "$CORPUS_VERSION" ]]; then
+        log "ERROR: could not resolve the latest release of ${RELEASE_REPO}"
+        exit 1
+    fi
+    log "latest release is ${CORPUS_VERSION}"
+fi
+
 # Idempotency short-circuit: already at target version?
 if [[ -f "${CORPUS_DIR}/corpus-manifest.json" ]]; then
     if command -v jq >/dev/null 2>&1; then
@@ -42,13 +63,6 @@ if [[ -f "${CORPUS_DIR}/corpus-manifest.json" ]]; then
             exit 0
         fi
     fi
-fi
-
-# Need gh CLI for release asset downloads (works on public + private alike).
-if ! command -v gh >/dev/null 2>&1; then
-    log "ERROR: gh CLI is required to download release assets"
-    log "  install: https://cli.github.com/"
-    exit 2
 fi
 
 # Fetch into a tmp dir to avoid touching ./corpus until validated.
@@ -63,14 +77,20 @@ gh release download "${CORPUS_VERSION}" \
     --pattern "sha256sum.txt" \
     --pattern "corpus-manifest.json"
 
-# Verify SHA-256.
+# Verify SHA-256 against the release's sha256sum.txt, and against the pin if set.
 log "verifying SHA-256"
 actual=$(sha256_of "corpus-${CORPUS_VERSION}.tar.gz")
-if [[ "$actual" != "$EXPECTED_SHA256" ]]; then
-    log "ERROR: SHA-256 mismatch"
+listed=$(awk -v f="corpus-${CORPUS_VERSION}.tar.gz" '$2 == f || $2 == "*"f {print $1}' sha256sum.txt)
+if [[ -z "$listed" || "$actual" != "$listed" ]]; then
+    log "ERROR: SHA-256 does not match the release's sha256sum.txt"
+    log "  listed: ${listed:-<missing>}"
+    log "  actual: $actual"
+    exit 1
+fi
+if [[ -n "$EXPECTED_SHA256" && "$actual" != "$EXPECTED_SHA256" ]]; then
+    log "ERROR: SHA-256 mismatch with the pinned EXPECTED_SHA256"
     log "  expected: $EXPECTED_SHA256"
     log "  actual:   $actual"
-    log "  the download may be corrupt or the EXPECTED_SHA256 constant is stale"
     exit 1
 fi
 log "SHA-256 verified"

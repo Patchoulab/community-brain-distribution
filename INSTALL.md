@@ -114,7 +114,7 @@ ollama list | grep gpt-oss
 ## 4. Clone the distribution repo
 
 ```bash
-git clone https://github.com/hopchouinard/community-brain-distribution
+git clone https://github.com/Patchoulab/community-brain-distribution
 cd community-brain-distribution
 ./verify-install.sh --step 4
 ```
@@ -277,7 +277,7 @@ See [`docs/troubleshooting.md`](./docs/troubleshooting.md).
 ```bash
 git pull
 ./verify-install.sh --check-required-env  # warn if new required keys appeared in .env.example
-./download-corpus.sh                    # no-op if CORPUS_VERSION unchanged
+./download-corpus.sh                    # latest release; no-op if already extracted
 docker compose pull                     # grab new image SHAs from compose.yml
 docker compose up -d                    # restart with new images
 ./verify-install.sh --post-install      # confirm green
