@@ -54,8 +54,9 @@ if [[ "$CORPUS_VERSION" == "latest" ]]; then
     log "latest release is ${CORPUS_VERSION}"
 fi
 
-# Idempotency short-circuit: already at target version?
-if [[ -f "${CORPUS_DIR}/corpus-manifest.json" ]]; then
+# Idempotency short-circuit: already at target version? Skipped when a hash is
+# pinned, so the pin is always checked against a fresh download.
+if [[ -z "$EXPECTED_SHA256" && -f "${CORPUS_DIR}/corpus-manifest.json" ]]; then
     if command -v jq >/dev/null 2>&1; then
         current=$(jq -r '.corpus_version' "${CORPUS_DIR}/corpus-manifest.json" 2>/dev/null || echo "")
         if [[ "$current" == "$CORPUS_VERSION" ]]; then
